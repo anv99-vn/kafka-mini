@@ -14,6 +14,7 @@ func main() {
 	group := flag.String("group", "test-group", "Consumer group ID")
 	topic := flag.String("topic", "test-topic", "Topic to subscribe to")
 	seek := flag.Int64("seek", -1, "Seek to offset (default -1)")
+	pollTimeout := flag.Int("poll-timeout", 1000, "Poll timeout in ms")
 	flag.Parse()
 
 	c, err := client.NewConsumer(*addr, *group)
@@ -39,7 +40,7 @@ func main() {
 	color.HiGreen("Consumer subscribed. Polling for messages...")
 
 	for {
-		msgs, err := c.Poll(1 * time.Second)
+		msgs, err := c.Poll(time.Duration(*pollTimeout) * time.Millisecond)
 		if err != nil {
 			log.Printf("poll error: %v", err)
 			time.Sleep(2 * time.Second)

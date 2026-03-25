@@ -1,4 +1,4 @@
-.PHONY: gen-proto clean tidy build help stop test-resume
+.PHONY: gen-proto clean tidy build help stop test-resume test-timeout
 
 # Variables
 PROTO_DIR = proto
@@ -65,6 +65,10 @@ test-offsets: stop ## Run offset test
 test-resume: stop ## Run consumer resume test (5 msg, same group restart)
 	@echo "Running consumer resume test..."
 	powershell -ExecutionPolicy Bypass -File scripts/test_resume.ps1
+
+test-timeout: stop ## Run timeout test (100 msg, small timeout limit)
+	@echo "Running timeout test..."
+	powershell -ExecutionPolicy Bypass -File scripts/test_timeout.ps1
 clean: ## Clean generated files
 	@echo "Cleaning generated files..."
 	powershell -Command "Remove-Item -Path $(PROTO_DIR)\*.pb.go -ErrorAction SilentlyContinue"

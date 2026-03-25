@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 	pb "github.com/vna/kafka-mini/proto"
@@ -154,7 +155,11 @@ func (b *Broker) Poll(ctx context.Context, req *pb.PollRequest) (*pb.PollRespons
 		b.groupOffsets[req.GroupId] = make(map[string]int64)
 	}
 
+	// Calculate deadline
+	deadline := time.Now().Add(time.Duration(req.TimeoutMs) * time.Millisecond)
 	var allMsgs []*pb.Message
+
+OuterLoop:
 	for _, topic := range topics {
 		partitions, ok := b.index[topic]
 		if !ok {
@@ -168,17 +173,20 @@ func (b *Broker) Poll(ctx context.Context, req *pb.PollRequest) (*pb.PollRespons
 			if currentOffset < int64(len(entries)) {
 				// Fetch messages from current offset
 				for i := currentOffset; i < int64(len(entries)); i++ {
+					// Check timeout
+					if time.Now().After(deadline) && len(allMsgs) > 0 {
+						break OuterLoop
+					}
+
 					entry := entries[i]
 					msg, err := b.Store.ReadAt(topic, p, entry.Offset, entry.Length)
 					if err == nil {
 						msg.Offset = i // Ensure we return the logical offset
 						allMsgs = append(allMsgs, msg)
+						// Partial advance: update offset after each successful fetch
+						b.groupOffsets[req.GroupId][tpKey] = i + 1
 					}
 				}
-				// Note: In a real system, Poll might NOT auto-advance the committed offset,
-				// but it should advance the FETCH offset. For simplicity, we'll advance it here
-				// so the next Poll gets new messages.
-				b.groupOffsets[req.GroupId][tpKey] = int64(len(entries))
 			}
 		}
 	}
