@@ -123,6 +123,11 @@ func (s *Server) startElection() {
 	votesReceived := 1
 	var votesMu sync.Mutex
 
+	if votesReceived*2 > len(s.peers) {
+		s.startLeader()
+		return
+	}
+
 	for i, peer := range s.peers {
 		if int32(i) == s.id {
 			continue

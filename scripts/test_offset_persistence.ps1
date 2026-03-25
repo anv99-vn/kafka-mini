@@ -16,7 +16,7 @@ make build
 # 2. Start Broker
 Write-Host "--- Step 2: Starting Broker ---" -ForegroundColor Cyan
 $BrokerProc = Start-Process -FilePath "./bin/broker.exe" -NoNewWindow -PassThru
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 5
 
 # 3. Create topic
 Write-Host "--- Step 3: Creating topic ---" -ForegroundColor Cyan

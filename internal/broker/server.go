@@ -202,9 +202,7 @@ OuterLoop:
 	}
 
 	if len(allMsgs) > 0 {
-		if err := b.Store.SaveOffsets(b.groupOffsets); err != nil {
-			color.Red("Failed to save offsets in Poll: %v", err)
-		}
+		// Offsets are updated in memory. They will be saved to disk only when Commit is called.
 	}
 
 	return &pb.PollResponse{
@@ -243,9 +241,7 @@ func (b *Broker) Seek(ctx context.Context, req *pb.SeekRequest) (*pb.Empty, erro
 	b.groupOffsets[req.GroupId][tpKey] = req.Offset
 	color.Magenta("Group %s seeking to offset %d for %s", req.GroupId, req.Offset, tpKey)
 
-	if err := b.Store.SaveOffsets(b.groupOffsets); err != nil {
-		color.Red("Failed to save offsets in Seek: %v", err)
-	}
+	// In-memory seek only. Persist on Commit.
 	return &pb.Empty{}, nil
 }
 

@@ -48,9 +48,20 @@ func main() {
 		}
 
 		if len(msgs) > 0 {
+			var lastOffset int64
 			for _, m := range msgs {
 				color.HiCyan("Received: %s (key: %s, offset: %d)", 
 					string(m.Value), string(m.Key), m.Offset)
+				lastOffset = m.Offset
+			}
+			// Automatically commit offsets after successful processing
+			err = c.Commit(map[string]int64{
+				*topic + "_0": lastOffset + 1,
+			})
+			if err != nil {
+				log.Printf("failed to commit: %v", err)
+			} else {
+				color.Yellow("Committed offset %d", lastOffset+1)
 			}
 		} else {
 			color.White("No new messages...")
