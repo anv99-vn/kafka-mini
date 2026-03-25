@@ -18,9 +18,7 @@ tidy: ## Tidy Go module
 	@echo "Tidying Go module..."
 	go mod tidy
 
-build: tidy ## Build the project
-	@echo "Building project..."
-	go build ./...
+build: tidy build-broker build-producer build-consumer ## Build all binaries
 
 build-broker: tidy ## Build the broker binary
 	@echo "Building broker..."

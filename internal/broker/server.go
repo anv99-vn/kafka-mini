@@ -32,11 +32,17 @@ type Broker struct {
 }
 
 func NewBroker(manager *TopicManager, store *MessageStore) *Broker {
+	offsets, err := store.LoadOffsets()
+	if err != nil {
+		color.Red("Failed to load offsets: %v", err)
+		offsets = make(map[string]map[string]int64)
+	}
+
 	b := &Broker{
 		Manager:       manager,
 		Store:         store,
 		index:         make(map[string]map[int32][]IndexEntry),
-		groupOffsets:  make(map[string]map[string]int64),
+		groupOffsets:  offsets,
 		subscriptions: make(map[string][]string),
 	}
 
@@ -191,6 +197,12 @@ OuterLoop:
 		}
 	}
 
+	if len(allMsgs) > 0 {
+		if err := b.Store.SaveOffsets(b.groupOffsets); err != nil {
+			color.Red("Failed to save offsets in Poll: %v", err)
+		}
+	}
+
 	return &pb.PollResponse{
 		Messages: allMsgs,
 	}, nil
@@ -209,6 +221,9 @@ func (b *Broker) Commit(ctx context.Context, req *pb.CommitRequest) (*pb.Empty, 
 		color.Yellow("Group %s committed offset %d for %s", req.GroupId, offset, tp)
 	}
 
+	if err := b.Store.SaveOffsets(b.groupOffsets); err != nil {
+		color.Red("Failed to save offsets in Commit: %v", err)
+	}
 	return &pb.Empty{}, nil
 }
 
@@ -224,6 +239,9 @@ func (b *Broker) Seek(ctx context.Context, req *pb.SeekRequest) (*pb.Empty, erro
 	b.groupOffsets[req.GroupId][tpKey] = req.Offset
 	color.Magenta("Group %s seeking to offset %d for %s", req.GroupId, req.Offset, tpKey)
 
+	if err := b.Store.SaveOffsets(b.groupOffsets); err != nil {
+		color.Red("Failed to save offsets in Seek: %v", err)
+	}
 	return &pb.Empty{}, nil
 }
 

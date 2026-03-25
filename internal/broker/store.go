@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"encoding/json"
+	"github.com/fatih/color"
 	pb "github.com/vna/kafka-mini/proto"
 	"google.golang.org/protobuf/proto"
 )
@@ -197,4 +199,32 @@ func (s *MessageStore) ReadAll(topic string, partition int32) ([]*pb.Message, er
 	}
 
 	return messages, nil
+}
+
+func (s *MessageStore) SaveOffsets(offsets map[string]map[string]int64) error {
+	path := filepath.Join(s.BaseDir, "offsets.json")
+	color.Yellow("Saving offsets to %s", path)
+	data, err := json.MarshalIndent(offsets, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+func (s *MessageStore) LoadOffsets() (map[string]map[string]int64, error) {
+	path := filepath.Join(s.BaseDir, "offsets.json")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return make(map[string]map[string]int64), nil
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var offsets map[string]map[string]int64
+	if err := json.Unmarshal(data, &offsets); err != nil {
+		return nil, err
+	}
+	return offsets, nil
 }
