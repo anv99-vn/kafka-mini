@@ -1,4 +1,4 @@
-.PHONY: gen-proto clean tidy build help stop
+.PHONY: gen-proto clean tidy build help stop test-resume
 
 # Variables
 PROTO_DIR = proto
@@ -58,6 +58,13 @@ test-integration: stop ## Run full integration test
 test-mutiple-key: stop ## Run multiple key test
 	@echo "Running multiple key test..."
 	powershell -ExecutionPolicy Bypass -File scripts/test_keys.ps1
+test-offsets: stop ## Run offset test
+	@echo "Running offset test..."
+	powershell -ExecutionPolicy Bypass -File scripts/test_offsets.ps1
+
+test-resume: stop ## Run consumer resume test (5 msg, same group restart)
+	@echo "Running consumer resume test..."
+	powershell -ExecutionPolicy Bypass -File scripts/test_resume.ps1
 clean: ## Clean generated files
 	@echo "Cleaning generated files..."
 	powershell -Command "Remove-Item -Path $(PROTO_DIR)\*.pb.go -ErrorAction SilentlyContinue"
