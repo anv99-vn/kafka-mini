@@ -1,0 +1,60 @@
+package main
+
+import (
+	"flag"
+	"log"
+	"time"
+
+	"github.com/fatih/color"
+	"github.com/vna/kafka-mini/pkg/client"
+)
+
+func main() {
+	addr := flag.String("addr", "localhost:9092", "Broker address")
+	group := flag.String("group", "test-group", "Consumer group ID")
+	topic := flag.String("topic", "test-topic", "Topic to subscribe to")
+	seek := flag.Int64("seek", -1, "Seek to offset (default -1)")
+	flag.Parse()
+
+	c, err := client.NewConsumer(*addr, *group)
+	if err != nil {
+		log.Fatalf("failed to create consumer: %v", err)
+	}
+	defer c.Close()
+
+	err = c.Subscribe([]string{*topic})
+	if err != nil {
+		log.Fatalf("failed to subscribe: %v", err)
+	}
+
+	if *seek >= 0 {
+		err = c.Seek(*topic, 0, *seek)
+		if err != nil {
+			log.Printf("failed to seek: %v", err)
+		} else {
+			color.HiMagenta("Seeked topic %s partition 0 to offset %d", *topic, *seek)
+		}
+	}
+
+	color.HiGreen("Consumer subscribed. Polling for messages...")
+
+	for {
+		msgs, err := c.Poll(1 * time.Second)
+		if err != nil {
+			log.Printf("poll error: %v", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		if len(msgs) > 0 {
+			for _, m := range msgs {
+				color.HiCyan("Received: %s (key: %s, offset: %d)", 
+					string(m.Value), string(m.Key), m.Offset)
+			}
+		} else {
+			color.White("No new messages...")
+		}
+		
+		time.Sleep(1 * time.Second)
+	}
+}

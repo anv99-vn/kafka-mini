@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package kafka;
+option go_package = "github.com/vna/kafka-mini/proto";
+
+// Core Messages
+message Message {
+  string topic = 1;
+  bytes key = 2;
+  bytes value = 3;
+  int64 offset = 4;
+  int64 timestamp = 5;
+}
+
+message TopicPartition {
+  string topic = 1;
+  int32 partition = 2;
+}
+
+// Producer API
+message SendRequest {
+  string topic = 1;
+  bytes key = 2;
+  repeated Message messages = 3;
+}
+
+message SendResponse {
+  repeated int64 offsets = 1;
+  int32 partition = 2;
+}
+
+// Consumer API
+message SubscribeRequest {
+  string group_id = 1;
+  repeated string topics = 2;
+}
+
+message PollRequest {
+  string group_id = 1;
+  int64 timeout_ms = 2;
+}
+
+message PollResponse {
+  repeated Message messages = 1;
+}
+
+message CommitRequest {
+  string group_id = 1;
+  map<string, int64> offsets = 2; // Map of TopicPartition (stringified) to Offset
+}
+
+message SeekRequest {
+  string group_id = 1;
+  TopicPartition partition = 2;
+  int64 offset = 3;
+}
+
+// Admin API
+message CreateTopicRequest {
+  string name = 1;
+  int32 partitions = 2;
+}
+
+message CreateTopicResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message DeleteTopicRequest {
+  string name = 1;
+}
+
+message ListTopicsRequest {}
+
+message ListTopicsResponse {
+  repeated string names = 1;
+}
+
+message TopicMetadata {
+  string name = 1;
+  int32 partitions = 2;
+}
+
+message DescribeTopicRequest {
+  string name = 1;
+}
+
+message DescribeTopicResponse {
+  TopicMetadata metadata = 1;
+}
+
+// Services
+service ProducerService {
+  rpc Send(SendRequest) returns (SendResponse);
+}
+
+service ConsumerService {
+  rpc Subscribe(SubscribeRequest) returns (Empty);
+  rpc Poll(PollRequest) returns (PollResponse);
+  rpc Commit(CommitRequest) returns (Empty);
+  rpc Seek(SeekRequest) returns (Empty);
+}
+
+service AdminService {
+  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
+  rpc DeleteTopic(DeleteTopicRequest) returns (Empty);
+  rpc ListTopics(ListTopicsRequest) returns (ListTopicsResponse);
+  rpc DescribeTopic(DescribeTopicRequest) returns (DescribeTopicResponse);
+}
+
+message Empty {}

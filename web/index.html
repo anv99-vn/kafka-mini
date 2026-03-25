@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka-mini Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="dark-mode">
+    <div class="container">
+        <header>
+            <h1>Kafka-mini <span>Admin</span></h1>
+            <div id="status-badge" class="badge">Checking...</div>
+        </header>
+
+        <main>
+            <section class="card stats-grid">
+                <div class="stat-item">
+                    <label>Total Topics</label>
+                    <span id="topic-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <label>Broker Address</label>
+                    <span id="broker-addr">localhost:9092</span>
+                </div>
+            </section>
+
+            <section class="card topic-section">
+                <div class="card-header">
+                    <h2>Topic Management</h2>
+                    <button id="btn-add-topic" class="btn primary">Create Topic</button>
+                </div>
+                <div class="table-container">
+                    <table id="topic-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Partitions</th>
+                                <th>Replication</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for Topic Creation -->
+    <div id="topic-modal" class="modal">
+        <div class="modal-content">
+            <h3>Create New Topic</h3>
+            <div class="form-group">
+                <label>Topic Name</label>
+                <input type="text" id="new-topic-name" placeholder="e.g. orders-topic">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Partitions</label>
+                    <input type="number" id="new-topic-partitions" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Replica Factor</label>
+                    <input type="number" id="new-topic-rf" value="1" min="1">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="btn-cancel" class="btn secondary">Cancel</button>
+                <button id="btn-confirm-create" class="btn primary">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
