@@ -6,10 +6,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/vna/kafka-mini/internal/raft"
+	"github.com/vna/kafka-mini/pkg/client"
 	pb "github.com/vna/kafka-mini/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -337,6 +339,130 @@ func TestProduceConsumeAfterLeaderFailure(t *testing.T) {
 	}
 
 	// Teardown remaining nodes
+	for i := 0; i < numNodes; i++ {
+		if i != leaderIdx {
+			raftServers[i].Stop()
+			servers[i].Stop()
+		}
+	}
+}
+
+func TestClientProducerFailover(t *testing.T) {
+	numNodes := 3
+	tmpDirs := make([]string, numNodes)
+	listeners := make([]net.Listener, numNodes)
+	peerAddrs := make([]string, numNodes)
+	var err error
+
+	for i := 0; i < numNodes; i++ {
+		tmpDirs[i], err = os.MkdirTemp("", fmt.Sprintf("kafka-mini-cluster-client-fail-%d-*", i))
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDirs[i])
+
+		listeners[i], err = net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("Failed to listen: %v", err)
+		}
+		peerAddrs[i] = listeners[i].Addr().String()
+	}
+
+	clients := make([][]pb.RaftServiceClient, numNodes)
+	for i := 0; i < numNodes; i++ {
+		clients[i] = make([]pb.RaftServiceClient, numNodes)
+		for j := 0; j < numNodes; j++ {
+			if i == j {
+				continue
+			}
+			conn, err := grpc.NewClient(peerAddrs[j], grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				t.Fatalf("Failed to dial peer %d: %v", j, err)
+			}
+			clients[i][j] = pb.NewRaftServiceClient(conn)
+			defer conn.Close()
+		}
+	}
+
+	brokers := make([]*Broker, numNodes)
+	servers := make([]*grpc.Server, numNodes)
+	raftServers := make([]*raft.Server, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		manager := NewTopicManager()
+		store, _ := NewMessageStore(tmpDirs[i])
+		sm := &BrokerStateMachine{Manager: manager}
+
+		raftServer, err := raft.NewServer(int32(i), clients[i], sm, tmpDirs[i])
+		if err != nil {
+			t.Fatalf("Failed to create raft server %d: %v", i, err)
+		}
+
+		b := NewBroker(manager, store, raftServer)
+		brokers[i] = b
+		raftServers[i] = raftServer
+
+		servers[i] = grpc.NewServer()
+		pb.RegisterAdminServiceServer(servers[i], b)
+		pb.RegisterProducerServiceServer(servers[i], b)
+		pb.RegisterConsumerServiceServer(servers[i], b)
+		pb.RegisterRaftServiceServer(servers[i], raftServer)
+
+		raftServer.Start()
+
+		go func(idx int) {
+			_ = servers[idx].Serve(listeners[idx])
+		}(i)
+	}
+
+	t.Log("Waiting for initial leader election...")
+	time.Sleep(3 * time.Second)
+
+	// Create a topic 
+	topicName := "producer-failover-topic"
+	req := &pb.CreateTopicRequest{Name: topicName, Partitions: 1}
+	leaderIdx := -1
+	for i := 0; i < numNodes; i++ {
+		res, err := brokers[i].CreateTopic(context.Background(), req)
+		if err == nil && res.Success {
+			leaderIdx = i
+			break
+		}
+	}
+	if leaderIdx == -1 {
+		t.Fatalf("No leader found for creating topic")
+	}
+
+	time.Sleep(1 * time.Second) // wait for replication
+
+	// Now initialize the Producer client with ALL addresses
+	allPeers := strings.Join(peerAddrs, ",")
+	t.Logf("Initializing Producer with bootstrap servers: %s", allPeers)
+	
+	p, err := client.NewProducer(allPeers)
+	if err != nil {
+		t.Fatalf("Failed to create Producer: %v", err)
+	}
+	defer p.Close()
+
+	// 2. Kill the leader first to make Producer fall back!
+	t.Logf("Killing Leader %d (address %s) to trigger connection failure...", leaderIdx, peerAddrs[leaderIdx])
+	raftServers[leaderIdx].Stop()
+	servers[leaderIdx].Stop()
+
+	// Wait a moment for new leader
+	time.Sleep(3 * time.Second)
+
+	// 3. Send message. The producer will attempt to use the first address (which might be dead),
+	// catch the error, reconnect to the next alive node, and succeed.
+	t.Log("Producer sending message...")
+	_, err = p.Send(topicName, []byte("key"), []byte("payload"))
+	if err != nil {
+		t.Fatalf("Producer failed to failover and send: %v", err)
+	}
+
+	t.Log("SUCCESS: Producer successfully sent message by finding a new alive node!")
+
 	for i := 0; i < numNodes; i++ {
 		if i != leaderIdx {
 			raftServers[i].Stop()
