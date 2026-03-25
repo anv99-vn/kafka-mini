@@ -2,6 +2,7 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/vna/kafka-mini/internal/raft"
 	pb "github.com/vna/kafka-mini/proto"
 )
 
@@ -22,6 +24,7 @@ type Broker struct {
 
 	Manager *TopicManager
 	Store   *MessageStore
+	Raft    *raft.Server
 	// index: topic -> partition -> entries
 	index map[string]map[int32][]IndexEntry
 
@@ -31,7 +34,7 @@ type Broker struct {
 	subscriptions map[string][]string
 }
 
-func NewBroker(manager *TopicManager, store *MessageStore) *Broker {
+func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server) *Broker {
 	offsets, err := store.LoadOffsets()
 	if err != nil {
 		color.Red("Failed to load offsets: %v", err)
@@ -41,6 +44,7 @@ func NewBroker(manager *TopicManager, store *MessageStore) *Broker {
 	b := &Broker{
 		Manager:       manager,
 		Store:         store,
+		Raft:          r,
 		index:         make(map[string]map[int32][]IndexEntry),
 		groupOffsets:  offsets,
 		subscriptions: make(map[string][]string),
@@ -249,7 +253,18 @@ func (b *Broker) Seek(ctx context.Context, req *pb.SeekRequest) (*pb.Empty, erro
 
 func (b *Broker) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest) (*pb.CreateTopicResponse, error) {
 	color.Blue("Received CreateTopic request: %s (partitions: %d)", req.Name, req.Partitions)
-	b.Manager.CreateTopic(req.Name, req.Partitions)
+	if b.Raft != nil {
+		cmd := RaftCommand{Op: "CreateTopic", Topic: req.Name, Partitions: req.Partitions}
+		data, _ := json.Marshal(cmd)
+		_, _, isLeader := b.Raft.Propose(data)
+		if !isLeader {
+			return &pb.CreateTopicResponse{Success: false, ErrorMessage: "not leader"}, nil
+		}
+	} else {
+		// Fallback for non-raft mode
+		b.Manager.CreateTopic(req.Name, req.Partitions)
+	}
+
 	return &pb.CreateTopicResponse{
 		Success: true,
 	}, nil
@@ -257,7 +272,16 @@ func (b *Broker) CreateTopic(ctx context.Context, req *pb.CreateTopicRequest) (*
 
 func (b *Broker) DeleteTopic(ctx context.Context, req *pb.DeleteTopicRequest) (*pb.Empty, error) {
 	color.Red("Received DeleteTopic request: %s", req.Name)
-	b.Manager.DeleteTopic(req.Name)
+	if b.Raft != nil {
+		cmd := RaftCommand{Op: "DeleteTopic", Topic: req.Name}
+		data, _ := json.Marshal(cmd)
+		_, _, isLeader := b.Raft.Propose(data)
+		if !isLeader {
+			return &pb.Empty{}, fmt.Errorf("not leader")
+		}
+	} else {
+		b.Manager.DeleteTopic(req.Name)
+	}
 	return &pb.Empty{}, nil
 }
 

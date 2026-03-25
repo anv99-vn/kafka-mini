@@ -5,15 +5,17 @@ import (
 	"net/http"
 	"strings"
 
+	"context"
+	pb "github.com/vna/kafka-mini/proto"
 	"github.com/vna/kafka-mini/internal/broker"
 )
 
 type HttpServer struct {
-	manager *broker.TopicManager
+	b *broker.Broker
 }
 
-func NewHttpServer(manager *broker.TopicManager) *HttpServer {
-	return &HttpServer{manager: manager}
+func NewHttpServer(b *broker.Broker) *HttpServer {
+	return &HttpServer{b: b}
 }
 
 func (s *HttpServer) Start(addr string) error {
@@ -32,9 +34,9 @@ func (s *HttpServer) Start(addr string) error {
 func (s *HttpServer) handleTopics(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		topics := s.manager.ListTopics()
+		res, _ := s.b.ListTopics(context.Background(), &pb.ListTopicsRequest{})
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(topics)
+		json.NewEncoder(w).Encode(res)
 
 	case http.MethodPost:
 		var req struct {
@@ -46,8 +48,18 @@ func (s *HttpServer) handleTopics(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		s.manager.CreateTopic(req.Name, req.Partitions)
-		w.WriteHeader(http.StatusCreated)
+		res, _ := s.b.CreateTopic(context.Background(), &pb.CreateTopicRequest{
+			Name:       req.Name,
+			Partitions: req.Partitions,
+		})
+		
+		if !res.Success {
+			http.Error(w, res.ErrorMessage, http.StatusServiceUnavailable)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(res)
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -66,6 +78,11 @@ func (s *HttpServer) handleTopicDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := parts[3]
-	s.manager.DeleteTopic(name)
+	res, err := s.b.DeleteTopic(context.Background(), &pb.DeleteTopicRequest{Name: name})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	_ = res
 	w.WriteHeader(http.StatusNoContent)
 }
