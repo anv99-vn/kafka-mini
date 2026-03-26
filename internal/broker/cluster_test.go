@@ -62,7 +62,7 @@ func TestRaftReplication(t *testing.T) {
 
 	// 3. Start nodes
 	for i := 0; i < numNodes; i++ {
-		manager := NewTopicManager()
+		manager := NewTopicManager(nil)
 		store, _ := NewMessageStore(tmpDirs[i])
 		sm := &BrokerStateMachine{Manager: manager}
 
@@ -214,7 +214,7 @@ func TestProduceConsumeAfterLeaderFailure(t *testing.T) {
 	raftServers := make([]*raft.Server, numNodes)
 
 	for i := 0; i < numNodes; i++ {
-		manager := NewTopicManager()
+		manager := NewTopicManager(nil)
 		store, _ := NewMessageStore(tmpDirs[i])
 		sm := &BrokerStateMachine{Manager: manager}
 
@@ -400,7 +400,7 @@ func TestClientProducerFailover(t *testing.T) {
 	raftServers := make([]*raft.Server, numNodes)
 
 	for i := 0; i < numNodes; i++ {
-		manager := NewTopicManager()
+		manager := NewTopicManager(nil)
 		store, _ := NewMessageStore(tmpDirs[i])
 		sm := &BrokerStateMachine{Manager: manager}
 

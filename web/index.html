@@ -21,24 +21,63 @@
                     <span id="topic-count">0</span>
                 </div>
                 <div class="stat-item">
+                    <label>Active Groups</label>
+                    <span id="group-count">0</span>
+                </div>
+                <div class="stat-item">
                     <label>Broker Address</label>
                     <span id="broker-addr">localhost:9092</span>
                 </div>
             </section>
 
-            <section class="card topic-section">
+            <div class="dashboard-grid">
+                <section class="card node-section">
+                    <div class="card-header">
+                        <h2>Node Info</h2>
+                        <div id="node-badge" class="badge">N/A</div>
+                    </div>
+                    <div class="node-details">
+                        <div class="detail-item"><strong>Node ID:</strong> <span id="node-id">-</span></div>
+                        <div class="detail-item"><strong>State:</strong> <span id="node-state">-</span></div>
+                        <div class="detail-item"><strong>Term:</strong> <span id="node-term">-</span></div>
+                        <div class="detail-item"><strong>Leader ID:</strong> <span id="node-leader">-</span></div>
+                    </div>
+                </section>
+
+                <section class="card topic-section">
+                    <div class="card-header">
+                        <h2>Topic Management</h2>
+                        <button id="btn-add-topic" class="btn primary">Create Topic</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="topic-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Partitions</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <section class="card group-section">
                 <div class="card-header">
-                    <h2>Topic Management</h2>
-                    <button id="btn-add-topic" class="btn primary">Create Topic</button>
+                    <h2>Consumer Groups</h2>
                 </div>
                 <div class="table-container">
-                    <table id="topic-table">
+                    <table id="group-table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Partitions</th>
-                                <th>Replication</th>
-                                <th>Actions</th>
+                                <th>Group ID</th>
+                                <th>Subscribed Topics</th>
+                                <th>Members</th>
+                                <th>State</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -62,10 +101,6 @@
                 <div class="form-group">
                     <label>Partitions</label>
                     <input type="number" id="new-topic-partitions" value="1" min="1">
-                </div>
-                <div class="form-group">
-                    <label>Replica Factor</label>
-                    <input type="number" id="new-topic-rf" value="1" min="1">
                 </div>
             </div>
             <div class="modal-actions">

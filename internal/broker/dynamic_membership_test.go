@@ -59,7 +59,7 @@ func TestDynamicMembershipAddRemove(t *testing.T) {
 			defer conn.Close()
 		}
 
-		manager := NewTopicManager()
+		manager := NewTopicManager(nil)
 		store, _ := NewMessageStore(tmpDirs[i])
 		sm := &BrokerStateMachine{Manager: manager}
 
@@ -86,7 +86,7 @@ func TestDynamicMembershipAddRemove(t *testing.T) {
 		peerAddrs := make(map[int32]string)
 		peerAddrs[int32(i)] = peerAddrsList[i]
 
-		manager := NewTopicManager()
+		manager := NewTopicManager(nil)
 		store, _ := NewMessageStore(tmpDirs[i])
 		sm := &BrokerStateMachine{Manager: manager}
 

@@ -8,11 +8,13 @@ import (
 type TopicManager struct {
 	mu     sync.RWMutex
 	topics map[string]*pb.TopicMetadata
+	store  *MessageStore
 }
 
-func NewTopicManager() *TopicManager {
+func NewTopicManager(store *MessageStore) *TopicManager {
 	return &TopicManager{
 		topics: make(map[string]*pb.TopicMetadata),
+		store:  store,
 	}
 }
 
@@ -23,11 +25,18 @@ func (m *TopicManager) CreateTopic(name string, partitions int32) {
 		Name:       name,
 		Partitions: partitions,
 	}
+	if m.store != nil {
+		m.store.CreateTopicFiles(name, partitions)
+	}
 }
 
 func (m *TopicManager) DeleteTopic(name string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	metadata, ok := m.topics[name]
+	if ok && m.store != nil {
+		m.store.DeleteTopicFiles(name, metadata.Partitions)
+	}
 	delete(m.topics, name)
 }
 

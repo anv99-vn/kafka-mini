@@ -228,3 +228,49 @@ func (s *MessageStore) LoadOffsets() (map[string]map[string]int64, error) {
 	}
 	return offsets, nil
 }
+
+func (s *MessageStore) CreateTopicFiles(topic string, partitions int32) error {
+	for p := int32(0); p < partitions; p++ {
+		dataPath := s.getDataPath(topic, p)
+		idxPath := s.getIndexPath(topic, p)
+
+		// Create empty .bin file
+		df, err := os.OpenFile(dataPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		if err == nil {
+			df.Close()
+		} else if !os.IsExist(err) {
+			return err
+		}
+
+		// Create empty .idx file
+		idxF, err := os.OpenFile(idxPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		if err == nil {
+			idxF.Close()
+		} else if !os.IsExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *MessageStore) DeleteTopicFiles(topic string, partitions int32) error {
+	for p := int32(0); p < partitions; p++ {
+		dataPath := s.getDataPath(topic, p)
+		idxPath := s.getIndexPath(topic, p)
+		
+		// Remove .bin
+		if _, err := os.Stat(dataPath); err == nil {
+			if err := os.Remove(dataPath); err != nil {
+				return err
+			}
+		}
+
+		// Remove .idx
+		if _, err := os.Stat(idxPath); err == nil {
+			if err := os.Remove(idxPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

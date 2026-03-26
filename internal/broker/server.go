@@ -415,3 +415,31 @@ func (b *Broker) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb
 	b.mu.Unlock()
 	return &pb.Empty{}, nil
 }
+
+type GroupInfo struct {
+	Name      string   `json:"name"`
+	Topics    []string `json:"topics"`
+	Members   int      `json:"members"`
+	State     string   `json:"state"`
+}
+
+func (b *Broker) ListGroups() []GroupInfo {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	res := make([]GroupInfo, 0, len(b.subscriptions))
+	for name, topics := range b.subscriptions {
+		members := len(b.groupMembers[name])
+		state := "Stable"
+		if members == 0 {
+			state = "Empty"
+		}
+		res = append(res, GroupInfo{
+			Name:    name,
+			Topics:  topics,
+			Members: members,
+			State:   state,
+		})
+	}
+	return res
+}

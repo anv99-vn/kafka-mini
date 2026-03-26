@@ -23,8 +23,13 @@ func main() {
 	dataDir := flag.String("data", "./data", "Data directory")
 	flag.Parse()
 
+	store, err := broker.NewMessageStore(*dataDir)
+	if err != nil {
+		log.Fatalf("failed to initialize store: %v", err)
+	}
+
 	// Initialize Shared State
-	manager := broker.NewTopicManager()
+	manager := broker.NewTopicManager(store)
 
 	// Initialize Raft Peers
 	peerAddrsList := strings.Split(*peersFlag, ",")
@@ -57,10 +62,6 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	store, err := broker.NewMessageStore(*dataDir)
-	if err != nil {
-		log.Fatalf("failed to initialize store: %v", err)
-	}
 	b := broker.NewBroker(manager, store, raftServer, peerAddrs)
 
 	// Start Admin HTTP Server in background

@@ -28,6 +28,7 @@ func (s *HttpServer) Start(addr string) error {
 	mux.HandleFunc("/api/topics", s.handleTopics)
 	mux.HandleFunc("/api/topics/", s.handleTopicDetail) // For DELETE
 	mux.HandleFunc("/api/status", s.handleStatus)
+	mux.HandleFunc("/api/groups", s.handleGroups)
 
 	return http.ListenAndServe(addr, mux)
 }
@@ -35,9 +36,9 @@ func (s *HttpServer) Start(addr string) error {
 func (s *HttpServer) handleTopics(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		res, _ := s.b.ListTopics(context.Background(), &pb.ListTopicsRequest{})
+		topics := s.b.Manager.ListTopics()
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(res)
+		json.NewEncoder(w).Encode(topics)
 
 	case http.MethodPost:
 		var req struct {
@@ -97,4 +98,10 @@ func (s *HttpServer) handleStatus(w http.ResponseWriter, r *http.Request) {
 		"term":      term,
 		"leader_id": leaderId,
 	})
+}
+
+func (s *HttpServer) handleGroups(w http.ResponseWriter, r *http.Request) {
+	groups := s.b.ListGroups()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(groups)
 }

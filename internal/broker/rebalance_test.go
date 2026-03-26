@@ -19,7 +19,7 @@ func TestConsumerRebalance(t *testing.T) {
 	lis, _ := net.Listen("tcp", "127.0.0.1:0")
 	addr := lis.Addr().String()
 
-	manager := NewTopicManager()
+	manager := NewTopicManager(nil)
 	store, _ := NewMessageStore(tmpDir)
 	b := NewBroker(manager, store, nil, nil) // No Raft for simplicity
 

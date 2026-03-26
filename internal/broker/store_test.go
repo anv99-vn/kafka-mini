@@ -64,7 +64,7 @@ func TestBroker_RecoveryFromIndex(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	store, _ := NewMessageStore(tmpDir)
-	manager := NewTopicManager()
+	manager := NewTopicManager(nil)
 	topic := "recovery-topic"
 
 	// 1. Manually create data and index as if the broker was running before
