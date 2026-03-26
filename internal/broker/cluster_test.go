@@ -71,7 +71,7 @@ func TestRaftReplication(t *testing.T) {
 			t.Fatalf("Failed to create raft server %d: %v", i, err)
 		}
 		
-		b := NewBroker(manager, store, raftServer)
+		b := NewBroker(manager, store, raftServer, peerAddrs)
 		brokers[i] = b
 		raftServers[i] = raftServer
 
@@ -217,7 +217,7 @@ func TestProduceConsumeAfterLeaderFailure(t *testing.T) {
 			t.Fatalf("Failed to create raft server %d: %v", i, err)
 		}
 
-		b := NewBroker(manager, store, raftServer)
+		b := NewBroker(manager, store, raftServer, peerAddrs)
 		brokers[i] = b
 		raftServers[i] = raftServer
 
@@ -398,7 +398,7 @@ func TestClientProducerFailover(t *testing.T) {
 			t.Fatalf("Failed to create raft server %d: %v", i, err)
 		}
 
-		b := NewBroker(manager, store, raftServer)
+		b := NewBroker(manager, store, raftServer, peerAddrs)
 		brokers[i] = b
 		raftServers[i] = raftServer
 

@@ -75,7 +75,7 @@ func TestBroker_RecoveryFromIndex(t *testing.T) {
 	}
 
 	// 2. Clear memory state and re-init broker
-	b := NewBroker(manager, store, nil)
+	b := NewBroker(manager, store, nil, nil)
 
 	// 3. Verify index was loaded
 	b.mu.Lock()

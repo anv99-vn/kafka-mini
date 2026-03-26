@@ -31,6 +31,7 @@ type Server struct {
 	state       State
 	currentTerm int64
 	votedFor    int32
+	leaderId    int32
 
 	commitIndex int64
 	lastApplied int64
@@ -56,6 +57,7 @@ func NewServer(id int32, peers []pb.RaftServiceClient, sm StateMachine, baseDir 
 		log:        raftLog,
 		state:      Follower,
 		votedFor:   -1,
+		leaderId:   -1,
 		shutdownCh: make(chan struct{}),
 	}
 
@@ -179,6 +181,7 @@ func (s *Server) becomeFollower(term int64) {
 	s.state = Follower
 	s.currentTerm = term
 	s.votedFor = -1
+	s.leaderId = -1
 	s.electionResetEvent = time.Now()
 	go s.runElectionTimer()
 }
@@ -186,6 +189,7 @@ func (s *Server) becomeFollower(term int64) {
 func (s *Server) startLeader() {
 	color.HiGreen("Node %d: becoming Leader for term %d", s.id, s.currentTerm)
 	s.state = Leader
+	s.leaderId = s.id
 
 	s.nextIndex = make([]int64, len(s.peers))
 	s.matchIndex = make([]int64, len(s.peers))
@@ -346,6 +350,7 @@ func (s *Server) AppendEntries(ctx context.Context, args *pb.AppendEntriesArgs) 
 		return reply, nil
 	}
 
+	s.leaderId = args.LeaderId
 	s.electionResetEvent = time.Now()
 	
 	if s.state == Candidate {
@@ -411,6 +416,12 @@ func (s *Server) Propose(command []byte) (int64, int64, bool) {
 	go s.sendHeartbeats()
 
 	return index, term, true
+}
+
+func (s *Server) IsLeader() (int32, int64, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.leaderId, s.currentTerm, s.state == Leader
 }
 
 func (s *Server) applyCommitted() {

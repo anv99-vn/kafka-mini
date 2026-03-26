@@ -74,22 +74,49 @@ func (p *Producer) Send(topic string, key []byte, values ...[]byte) (*pb.SendRes
 	}
 
 	var lastErr error
-	for i := 0; i < len(p.addrs); i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		res, err := p.client.Send(ctx, req)
-		cancel()
+	maxRetries := 10 // Overall limit, allowing time for new leader to be elected
+	
+	for r := 0; r < maxRetries; r++ {
+		for i := 0; i < len(p.addrs); i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			res, err := p.client.Send(ctx, req)
+			cancel()
 
-		if err == nil {
-			return res, nil
+			if err == nil {
+				return res, nil
+			}
+
+			lastErr = err
+			
+			// Detect if there's a leader hint
+			if strings.Contains(err.Error(), "hint:") {
+				parts := strings.Split(err.Error(), "hint: ")
+				if len(parts) > 1 {
+					hintAddr := strings.TrimSpace(parts[1])
+					// Find if hintAddr is in our list
+					for idx, a := range p.addrs {
+						if a == hintAddr || ":" + a == hintAddr || a == ":" + hintAddr {
+							fmt.Printf("Received hint: leader is at %s. Jumping to it...\n", hintAddr)
+							p.currIdx = idx
+							_ = p.connect()
+							break
+						}
+					}
+					// If we found a hint, don't just increment currIdx, retry on the hinted node immediately
+					continue 
+				}
+			}
+
+			// We encountered an error (e.g., connection lost).
+			// Rotate to next broker
+			p.currIdx = (p.currIdx + 1) % len(p.addrs)
+			_ = p.connect()
 		}
-
-		lastErr = err
-		// Rotate to next broker
-		p.currIdx = (p.currIdx + 1) % len(p.addrs)
-		_ = p.connect()
+		// Wait before trying the cluster again, giving Raft time to elect a new leader
+		time.Sleep(300 * time.Millisecond)
 	}
 
-	return nil, fmt.Errorf("all brokers failed, last error: %v", lastErr)
+	return nil, fmt.Errorf("failed after retries, last error: %v", lastErr)
 }
 
 func (p *Producer) Close() error {

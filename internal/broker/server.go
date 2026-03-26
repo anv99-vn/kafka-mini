@@ -25,6 +25,7 @@ type Broker struct {
 	Manager *TopicManager
 	Store   *MessageStore
 	Raft    *raft.Server
+	peerAddrs []string
 	// index: topic -> partition -> entries
 	index map[string]map[int32][]IndexEntry
 
@@ -34,7 +35,7 @@ type Broker struct {
 	subscriptions map[string][]string
 }
 
-func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server) *Broker {
+func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server, peerAddrs []string) *Broker {
 	offsets, err := store.LoadOffsets()
 	if err != nil {
 		color.Red("Failed to load offsets: %v", err)
@@ -45,6 +46,7 @@ func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server) *Brok
 		Manager:       manager,
 		Store:         store,
 		Raft:          r,
+		peerAddrs:     peerAddrs,
 		index:         make(map[string]map[int32][]IndexEntry),
 		groupOffsets:  offsets,
 		subscriptions: make(map[string][]string),
@@ -99,6 +101,16 @@ func (b *Broker) loadMessages() {
 // Producer Service Handlers
 
 func (b *Broker) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
+	if b.Raft != nil {
+		leaderId, _, isLeader := b.Raft.IsLeader()
+		if !isLeader {
+			if leaderId >= 0 && int(leaderId) < len(b.peerAddrs) {
+				return nil, fmt.Errorf("not leader, hint: %s", b.peerAddrs[leaderId])
+			}
+			return nil, fmt.Errorf("not leader")
+		}
+	}
+
 	color.Cyan("Received Send request for topic: %s with %d messages", req.Topic, len(req.Messages))
 
 	numPartitions := int32(1)

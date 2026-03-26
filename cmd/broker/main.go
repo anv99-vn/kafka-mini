@@ -60,7 +60,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize store: %v", err)
 	}
-	b := broker.NewBroker(manager, store, raftServer)
+	b := broker.NewBroker(manager, store, raftServer, peerAddrs)
 
 	// Start Admin HTTP Server in background
 	httpServer := admin.NewHttpServer(b)
