@@ -24,7 +24,7 @@ type Server struct {
 	mu sync.Mutex
 
 	id    int32
-	peers []pb.RaftServiceClient // RPC clients to other nodes
+	peers map[int32]pb.RaftServiceClient // RPC clients to other nodes
 	sm    StateMachine
 	log   *Log
 
@@ -37,14 +37,14 @@ type Server struct {
 	lastApplied int64
 
 	// Leader state
-	nextIndex  []int64
-	matchIndex []int64
+	nextIndex  map[int32]int64
+	matchIndex map[int32]int64
 
 	electionResetEvent time.Time
 	shutdownCh         chan struct{}
 }
 
-func NewServer(id int32, peers []pb.RaftServiceClient, sm StateMachine, baseDir string) (*Server, error) {
+func NewServer(id int32, peers map[int32]pb.RaftServiceClient, sm StateMachine, baseDir string) (*Server, error) {
 	raftLog, err := NewLog(baseDir)
 	if err != nil {
 		return nil, err
@@ -125,17 +125,13 @@ func (s *Server) startElection() {
 	votesReceived := 1
 	var votesMu sync.Mutex
 
-	if votesReceived*2 > len(s.peers) {
+	if votesReceived*2 > len(s.peers)+1 {
 		s.startLeader()
 		return
 	}
 
-	for i, peer := range s.peers {
-		if int32(i) == s.id {
-			continue
-		}
-
-		go func(peer pb.RaftServiceClient) {
+	for peerId, peer := range s.peers {
+		go func(peer pb.RaftServiceClient, targetId int32) {
 			s.mu.Lock()
 			args := &pb.RequestVoteArgs{
 				Term:         savedCurrentTerm,
@@ -165,12 +161,12 @@ func (s *Server) startElection() {
 			if reply.VoteGranted {
 				votesMu.Lock()
 				votesReceived++
-				if votesReceived*2 > len(s.peers) {
+				if votesReceived*2 > len(s.peers)+1 {
 					s.startLeader()
 				}
 				votesMu.Unlock()
 			}
-		}(peer)
+		}(peer, peerId)
 	}
 
 	go s.runElectionTimer()
@@ -191,12 +187,15 @@ func (s *Server) startLeader() {
 	s.state = Leader
 	s.leaderId = s.id
 
-	s.nextIndex = make([]int64, len(s.peers))
-	s.matchIndex = make([]int64, len(s.peers))
-	for i := range s.peers {
-		s.nextIndex[i] = s.log.LastIndex() + 1
-		s.matchIndex[i] = 0
+	s.nextIndex = make(map[int32]int64)
+	s.matchIndex = make(map[int32]int64)
+	for peerId := range s.peers {
+		s.nextIndex[peerId] = s.log.LastIndex() + 1
+		s.matchIndex[peerId] = 0
 	}
+	// Also for self
+	s.matchIndex[s.id] = s.log.LastIndex()
+	s.nextIndex[s.id] = s.log.LastIndex() + 1
 
 	go func() {
 		ticker := time.NewTicker(50 * time.Millisecond)
@@ -225,21 +224,17 @@ func (s *Server) sendHeartbeats() {
 	savedCurrentTerm := s.currentTerm
 	s.mu.Unlock()
 
-	for i, peer := range s.peers {
-		if int32(i) == s.id {
-			continue
-		}
-
-		go func(peer pb.RaftServiceClient, peerId int) {
+	for peerId, peer := range s.peers {
+		go func(peer pb.RaftServiceClient, targetId int32) {
 			s.mu.Lock()
-			prevLogIndex := s.nextIndex[peerId] - 1
+			prevLogIndex := s.nextIndex[targetId] - 1
 			prevLogTerm := int64(0)
 			if prevLogIndex >= 0 {
 				if entry := s.log.Get(prevLogIndex); entry != nil {
 					prevLogTerm = entry.Term
 				}
 			}
-			entries := s.log.EntriesFrom(s.nextIndex[peerId])
+			entries := s.log.EntriesFrom(s.nextIndex[targetId])
 
 			args := &pb.AppendEntriesArgs{
 				Term:         savedCurrentTerm,
@@ -270,8 +265,8 @@ func (s *Server) sendHeartbeats() {
 
 			if reply.Success {
 				if len(entries) > 0 {
-					s.nextIndex[peerId] = entries[len(entries)-1].Index + 1
-					s.matchIndex[peerId] = s.nextIndex[peerId] - 1
+					s.nextIndex[targetId] = entries[len(entries)-1].Index + 1
+					s.matchIndex[targetId] = s.nextIndex[targetId] - 1
 					
 					// Check if we can commit
 					savedCommitIndex := s.commitIndex
@@ -279,15 +274,12 @@ func (s *Server) sendHeartbeats() {
 						entry := s.log.Get(n)
 						if entry != nil && entry.Term == s.currentTerm {
 							matchCount := 1
-							for p := range s.peers {
-								if int32(p) == s.id {
-									continue
-								}
-								if s.matchIndex[p] >= n {
+							for pId := range s.peers {
+								if s.matchIndex[pId] >= n {
 									matchCount++
 								}
 							}
-							if matchCount*2 > len(s.peers) {
+							if matchCount*2 > len(s.peers)+1 {
 								s.commitIndex = n
 								break
 							}
@@ -298,9 +290,9 @@ func (s *Server) sendHeartbeats() {
 					}
 				}
 			} else {
-				s.nextIndex[peerId]--
+				s.nextIndex[targetId]--
 			}
-		}(peer, i)
+		}(peer, peerId)
 	}
 }
 

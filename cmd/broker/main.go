@@ -28,17 +28,16 @@ func main() {
 
 	// Initialize Raft Peers
 	peerAddrs := strings.Split(*peersFlag, ",")
-	peers := make([]pb.RaftServiceClient, len(peerAddrs))
+	peers := make(map[int32]pb.RaftServiceClient)
 	for i, peerAddr := range peerAddrs {
 		if i == *id {
-			peers[i] = nil // Self, no RPC client needed
-			continue
+			continue // Self, no RPC client needed
 		}
 		conn, err := grpc.NewClient(peerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Fatalf("failed to connect to peer %s: %v", peerAddr, err)
 		}
-		peers[i] = pb.NewRaftServiceClient(conn)
+		peers[int32(i)] = pb.NewRaftServiceClient(conn)
 	}
 
 	// Initialize Raft Server

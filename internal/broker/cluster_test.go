@@ -40,9 +40,9 @@ func TestRaftReplication(t *testing.T) {
 	}
 
 	// 2. Initialize gRPC clients
-	clients := make([][]pb.RaftServiceClient, numNodes)
+	clients := make([]map[int32]pb.RaftServiceClient, numNodes)
 	for i := 0; i < numNodes; i++ {
-		clients[i] = make([]pb.RaftServiceClient, numNodes)
+		clients[i] = make(map[int32]pb.RaftServiceClient)
 		for j := 0; j < numNodes; j++ {
 			if i == j {
 				continue
@@ -51,7 +51,7 @@ func TestRaftReplication(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to dial peer %d: %v", j, err)
 			}
-			clients[i][j] = pb.NewRaftServiceClient(conn)
+			clients[i][int32(j)] = pb.NewRaftServiceClient(conn)
 			defer conn.Close()
 		}
 	}
@@ -187,9 +187,9 @@ func TestProduceConsumeAfterLeaderFailure(t *testing.T) {
 		peerAddrs[i] = listeners[i].Addr().String()
 	}
 
-	clients := make([][]pb.RaftServiceClient, numNodes)
+	clients := make([]map[int32]pb.RaftServiceClient, numNodes)
 	for i := 0; i < numNodes; i++ {
-		clients[i] = make([]pb.RaftServiceClient, numNodes)
+		clients[i] = make(map[int32]pb.RaftServiceClient)
 		for j := 0; j < numNodes; j++ {
 			if i == j {
 				continue
@@ -198,7 +198,7 @@ func TestProduceConsumeAfterLeaderFailure(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to dial peer %d: %v", j, err)
 			}
-			clients[i][j] = pb.NewRaftServiceClient(conn)
+			clients[i][int32(j)] = pb.NewRaftServiceClient(conn)
 			defer conn.Close()
 		}
 	}
@@ -368,9 +368,9 @@ func TestClientProducerFailover(t *testing.T) {
 		peerAddrs[i] = listeners[i].Addr().String()
 	}
 
-	clients := make([][]pb.RaftServiceClient, numNodes)
+	clients := make([]map[int32]pb.RaftServiceClient, numNodes)
 	for i := 0; i < numNodes; i++ {
-		clients[i] = make([]pb.RaftServiceClient, numNodes)
+		clients[i] = make(map[int32]pb.RaftServiceClient)
 		for j := 0; j < numNodes; j++ {
 			if i == j {
 				continue
@@ -379,7 +379,7 @@ func TestClientProducerFailover(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to dial peer %d: %v", j, err)
 			}
-			clients[i][j] = pb.NewRaftServiceClient(conn)
+			clients[i][int32(j)] = pb.NewRaftServiceClient(conn)
 			defer conn.Close()
 		}
 	}
