@@ -413,7 +413,12 @@ func (s *Server) Propose(command []byte) (int64, int64, bool) {
 	s.matchIndex[s.id] = index
 	s.nextIndex[s.id] = index + 1
 
-	go s.sendHeartbeats()
+	if len(s.peers) == 0 {
+		s.commitIndex = index
+		s.applyCommitted()
+	} else {
+		go s.sendHeartbeats()
+	}
 
 	return index, term, true
 }
@@ -446,7 +451,12 @@ func (s *Server) AddPeer(id int32, addr string) (int64, int64, bool) {
 	s.matchIndex[s.id] = index
 	s.nextIndex[s.id] = index + 1
 
-	go s.sendHeartbeats()
+	if len(s.peers) == 0 {
+		s.commitIndex = index
+		s.applyCommitted()
+	} else {
+		go s.sendHeartbeats()
+	}
 
 	return index, term, true
 }
@@ -478,7 +488,12 @@ func (s *Server) RemovePeer(id int32) (int64, int64, bool) {
 	s.matchIndex[s.id] = index
 	s.nextIndex[s.id] = index + 1
 
-	go s.sendHeartbeats()
+	if len(s.peers) == 0 {
+		s.commitIndex = index
+		s.applyCommitted()
+	} else {
+		go s.sendHeartbeats()
+	}
 
 	return index, term, true
 }

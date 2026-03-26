@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/vna/kafka-mini/internal/raft"
 	pb "github.com/vna/kafka-mini/proto"
+	"google.golang.org/grpc/peer"
 )
 
 type Broker struct {
@@ -33,6 +35,11 @@ type Broker struct {
 	groupOffsets map[string]map[string]int64
 	// subscriptions: group -> topics
 	subscriptions map[string][]string
+
+	// groupMembers: group -> member_id -> last_seen
+	groupMembers map[string]map[string]time.Time
+	// groupAssignment: group -> member_id -> partitions
+	groupAssignment map[string]map[string][]*pb.TopicPartition
 }
 
 func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server, peerAddrs map[int32]string) *Broker {
@@ -50,6 +57,8 @@ func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server, peerA
 		index:         make(map[string]map[int32][]IndexEntry),
 		groupOffsets:  offsets,
 		subscriptions: make(map[string][]string),
+		groupMembers:  make(map[string]map[string]time.Time),
+		groupAssignment: make(map[string]map[string][]*pb.TopicPartition),
 	}
 
 	b.loadMessages()
@@ -168,8 +177,40 @@ func (b *Broker) Poll(ctx context.Context, req *pb.PollRequest) (*pb.PollRespons
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	topics, ok := b.subscriptions[req.GroupId]
+	// 1. Identify Consumer
+	p, ok := peer.FromContext(ctx)
 	if !ok {
+		return nil, fmt.Errorf("no peer info in context")
+	}
+	memberId := p.Addr.String()
+
+	// 2. Update Heartbeat
+	if b.groupMembers[req.GroupId] == nil {
+		b.groupMembers[req.GroupId] = make(map[string]time.Time)
+	}
+	b.groupMembers[req.GroupId][memberId] = time.Now()
+
+	// 3. Check for Timeout and Membership Changes
+	rebalanceNeeded := false
+	now := time.Now()
+	for mId, lastSeen := range b.groupMembers[req.GroupId] {
+		if now.Sub(lastSeen) > 10*time.Second {
+			delete(b.groupMembers[req.GroupId], mId)
+			rebalanceNeeded = true
+		}
+	}
+
+	if _, assigned := b.groupAssignment[req.GroupId][memberId]; !assigned {
+		rebalanceNeeded = true
+	}
+
+	if rebalanceNeeded {
+		b.rebalance(req.GroupId)
+	}
+
+	// 4. Get Assigned Partitions
+	assigned := b.groupAssignment[req.GroupId][memberId]
+	if len(assigned) == 0 {
 		return &pb.PollResponse{}, nil
 	}
 
@@ -177,49 +218,82 @@ func (b *Broker) Poll(ctx context.Context, req *pb.PollRequest) (*pb.PollRespons
 		b.groupOffsets[req.GroupId] = make(map[string]int64)
 	}
 
-	// Calculate deadline
 	deadline := time.Now().Add(time.Duration(req.TimeoutMs) * time.Millisecond)
 	var allMsgs []*pb.Message
 
 OuterLoop:
-	for _, topic := range topics {
-		partitions, ok := b.index[topic]
+	for _, tp := range assigned {
+		entries, ok := b.index[tp.Topic][tp.Partition]
 		if !ok {
 			continue
 		}
 
-		for p, entries := range partitions {
-			tpKey := fmt.Sprintf("%s_%d", topic, p)
-			currentOffset := b.groupOffsets[req.GroupId][tpKey]
+		tpKey := fmt.Sprintf("%s_%d", tp.Topic, tp.Partition)
+		currentOffset := b.groupOffsets[req.GroupId][tpKey]
 
-			if currentOffset < int64(len(entries)) {
-				// Fetch messages from current offset
-				for i := currentOffset; i < int64(len(entries)); i++ {
-					// Check timeout
-					if time.Now().After(deadline) && len(allMsgs) > 0 {
-						break OuterLoop
-					}
+		if currentOffset < int64(len(entries)) {
+			count := 0
+			// Fetch messages from current offset
+			for i := currentOffset; i < int64(len(entries)); i++ {
+				if time.Now().After(deadline) && len(allMsgs) > 0 {
+					break OuterLoop
+				}
 
-					entry := entries[i]
-					msg, err := b.Store.ReadAt(topic, p, entry.Offset, entry.Length)
-					if err == nil {
-						msg.Offset = i // Ensure we return the logical offset
-						allMsgs = append(allMsgs, msg)
-						// Partial advance: update offset after each successful fetch
-						b.groupOffsets[req.GroupId][tpKey] = i + 1
-					}
+				entry := entries[i]
+				msg, err := b.Store.ReadAt(tp.Topic, tp.Partition, entry.Offset, entry.Length)
+				if err == nil {
+					msg.Offset = i
+					msg.Topic = tp.Topic
+					msg.Partition = tp.Partition
+					allMsgs = append(allMsgs, msg)
+					b.groupOffsets[req.GroupId][tpKey] = i + 1
+					count++
+				} else {
+					color.Red("Failed to read message at topic=%s partition=%d offset=%d index=%d: %v", tp.Topic, tp.Partition, entry.Offset, i, err)
+					// DO NOT increment the group offset so we can retry this message in the next poll
+					break // Stop fetching for this partition in this poll
 				}
 			}
+			if count > 0 {
+				color.HiCyan("POLL_DELIVERY: topic=%s partition=%d count=%d member=%s", tp.Topic, tp.Partition, count, memberId)
+			}
 		}
-	}
-
-	if len(allMsgs) > 0 {
-		// Offsets are updated in memory. They will be saved to disk only when Commit is called.
 	}
 
 	return &pb.PollResponse{
 		Messages: allMsgs,
 	}, nil
+}
+
+func (b *Broker) rebalance(groupId string) {
+	members := b.groupMembers[groupId]
+	topics := b.subscriptions[groupId]
+
+	var activeMembers []string
+	for id := range members {
+		activeMembers = append(activeMembers, id)
+	}
+	sort.Strings(activeMembers)
+
+	var allPartitions []*pb.TopicPartition
+	for _, topic := range topics {
+		if t, ok := b.Manager.GetTopic(topic); ok {
+			for p := int32(0); p < t.Partitions; p++ {
+				allPartitions = append(allPartitions, &pb.TopicPartition{Topic: topic, Partition: p})
+			}
+		}
+	}
+
+	newAssignment := make(map[string][]*pb.TopicPartition)
+	if len(activeMembers) > 0 {
+		for i, tp := range allPartitions {
+			mIdx := i % len(activeMembers)
+			mId := activeMembers[mIdx]
+			newAssignment[mId] = append(newAssignment[mId], tp)
+		}
+	}
+	b.groupAssignment[groupId] = newAssignment
+	color.HiMagenta("Rebalanced group %s: %d members, %d partitions distributed", groupId, len(activeMembers), len(allPartitions))
 }
 
 func (b *Broker) Commit(ctx context.Context, req *pb.CommitRequest) (*pb.Empty, error) {

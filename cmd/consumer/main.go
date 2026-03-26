@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -48,20 +49,22 @@ func main() {
 		}
 
 		if len(msgs) > 0 {
-			var lastOffset int64
+			offsets := make(map[string]int64)
 			for _, m := range msgs {
-				color.HiCyan("Received: %s (key: %s, offset: %d)", 
-					string(m.Value), string(m.Key), m.Offset)
-				lastOffset = m.Offset
+				color.HiCyan("Received: %s (topic: %s, partition: %d, offset: %d, key: %s)", 
+					string(m.Value), m.Topic, m.Partition, m.Offset, string(m.Key))
+				
+				tpKey := fmt.Sprintf("%s_%d", m.Topic, m.Partition)
+				offsets[tpKey] = m.Offset + 1
 			}
 			// Automatically commit offsets after successful processing
-			err = c.Commit(map[string]int64{
-				*topic + "_0": lastOffset + 1,
-			})
+			err = c.Commit(offsets)
 			if err != nil {
 				log.Printf("failed to commit: %v", err)
 			} else {
-				color.Yellow("Committed offset %d", lastOffset+1)
+				for tp, off := range offsets {
+					color.Yellow("Committed offset %d for %s", off, tp)
+				}
 			}
 		} else {
 			color.White("No new messages...")

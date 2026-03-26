@@ -29,6 +29,7 @@ type Message struct {
 	Value         []byte                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 	Offset        int64                  `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`
 	Timestamp     int64                  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Partition     int32                  `protobuf:"varint,6,opt,name=partition,proto3" json:"partition,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -94,6 +95,13 @@ func (x *Message) GetOffset() int64 {
 func (x *Message) GetTimestamp() int64 {
 	if x != nil {
 		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *Message) GetPartition() int32 {
+	if x != nil {
+		return x.Partition
 	}
 	return 0
 }
@@ -1029,13 +1037,14 @@ var File_proto_api_proto protoreflect.FileDescriptor
 
 const file_proto_api_proto_rawDesc = "" +
 	"\n" +
-	"\x0fproto/api.proto\x12\x05kafka\"}\n" +
+	"\x0fproto/api.proto\x12\x05kafka\"\x9b\x01\n" +
 	"\aMessage\x12\x14\n" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\fR\x03key\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\fR\x05value\x12\x16\n" +
 	"\x06offset\x18\x04 \x01(\x03R\x06offset\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"D\n" +
+	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\x12\x1c\n" +
+	"\tpartition\x18\x06 \x01(\x05R\tpartition\"D\n" +
 	"\x0eTopicPartition\x12\x14\n" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x1c\n" +
 	"\tpartition\x18\x02 \x01(\x05R\tpartition\"a\n" +
