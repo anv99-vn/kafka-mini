@@ -7,6 +7,7 @@ if (Test-Path "./data-test80") { Remove-Item "./data-test80" -Recurse -Force }
 if (Test-Path "broker-test80.log") { Remove-Item "broker-test80.log" }
 if (Test-Path "consumer-A.log") { Remove-Item "consumer-A.log" }
 if (Test-Path "consumer-B.log") { Remove-Item "consumer-B.log" }
+if (Test-Path "consumer-C.log") { Remove-Item "consumer-C.log" }
 
 make build
 
@@ -26,8 +27,8 @@ $Topic = "test80-topic"
 $Body = @{ name = $Topic; partitions = 4 } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8080/api/topics" -Method Post -Body $Body -ContentType "application/json"
 
-# 4. Start 2 Consumers concurrently in the same group
-Write-Host "--- Step 4: Starting 2 Consumers ---" -ForegroundColor Cyan
+# 4. Start 3 Consumers concurrently in the same group
+Write-Host "--- Step 4: Starting 3 Consumers ---" -ForegroundColor Cyan
 $GroupId = "test80-group"
 Start-Job -Name consumer-A -ScriptBlock {
     cd $Using:PWD
@@ -36,6 +37,10 @@ Start-Job -Name consumer-A -ScriptBlock {
 Start-Job -Name consumer-B -ScriptBlock {
     cd $Using:PWD
     ./bin/consumer.exe -addr localhost:9092 -group $Using:GroupId -topic $Using:Topic -poll-timeout 1000 > consumer-B.log 2>&1
+}
+Start-Job -Name consumer-C -ScriptBlock {
+    cd $Using:PWD
+    ./bin/consumer.exe -addr localhost:9092 -group $Using:GroupId -topic $Using:Topic -poll-timeout 1000 > consumer-C.log 2>&1
 }
 
 Write-Host "Waiting 10 seconds for initial rebalance..."
@@ -55,17 +60,20 @@ Start-Sleep -Seconds 15
 Write-Host "--- Step 6: Verifying Results ---" -ForegroundColor Cyan
 $logA = if (Test-Path "consumer-A.log") { Get-Content "consumer-A.log" } else { "" }
 $logB = if (Test-Path "consumer-B.log") { Get-Content "consumer-B.log" } else { "" }
+$logC = if (Test-Path "consumer-C.log") { Get-Content "consumer-C.log" } else { "" }
 
 $countA = ($logA | Select-String "Received:").Count
 $countB = ($logB | Select-String "Received:").Count
-$total = $countA + $countB
+$countC = ($logC | Select-String "Received:").Count
+$total = $countA + $countB + $countC
 
 Write-Host "Consumer A received: $countA messages"
 Write-Host "Consumer B received: $countB messages"
+Write-Host "Consumer C received: $countC messages"
 Write-Host "Total messages received: $total" -ForegroundColor Yellow
 
 # Show unique message values to ensure no duplicates
-$allMsgs = ($logA + $logB | Select-String -Pattern "Received: msg-(\d+)" | ForEach-Object { $_.Matches[0].Groups[0].Value })
+$allMsgs = ($logA + $logB + $logC | Select-String -Pattern "Received: msg-(\d+)" | ForEach-Object { $_.Matches[0].Groups[1].Value })
 $uniqueCount = ($allMsgs | Select-Object -Unique).Count
 Write-Host "Unique messages received: $uniqueCount"
 
