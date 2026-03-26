@@ -27,6 +27,7 @@ func (s *HttpServer) Start(addr string) error {
 	// API endpoints
 	mux.HandleFunc("/api/topics", s.handleTopics)
 	mux.HandleFunc("/api/topics/", s.handleTopicDetail) // For DELETE
+	mux.HandleFunc("/api/status", s.handleStatus)
 
 	return http.ListenAndServe(addr, mux)
 }
@@ -85,4 +86,15 @@ func (s *HttpServer) handleTopicDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = res
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *HttpServer) handleStatus(w http.ResponseWriter, r *http.Request) {
+	id, state, term, leaderId := s.b.Raft.Status()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"node_id":   id,
+		"state":     state,
+		"term":      term,
+		"leader_id": leaderId,
+	})
 }

@@ -345,6 +345,8 @@ const (
 	AdminService_DeleteTopic_FullMethodName   = "/kafka.AdminService/DeleteTopic"
 	AdminService_ListTopics_FullMethodName    = "/kafka.AdminService/ListTopics"
 	AdminService_DescribeTopic_FullMethodName = "/kafka.AdminService/DescribeTopic"
+	AdminService_AddPeer_FullMethodName       = "/kafka.AdminService/AddPeer"
+	AdminService_RemovePeer_FullMethodName    = "/kafka.AdminService/RemovePeer"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -355,6 +357,8 @@ type AdminServiceClient interface {
 	DeleteTopic(ctx context.Context, in *DeleteTopicRequest, opts ...grpc.CallOption) (*Empty, error)
 	ListTopics(ctx context.Context, in *ListTopicsRequest, opts ...grpc.CallOption) (*ListTopicsResponse, error)
 	DescribeTopic(ctx context.Context, in *DescribeTopicRequest, opts ...grpc.CallOption) (*DescribeTopicResponse, error)
+	AddPeer(ctx context.Context, in *AddPeerRequest, opts ...grpc.CallOption) (*Empty, error)
+	RemovePeer(ctx context.Context, in *RemovePeerRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type adminServiceClient struct {
@@ -405,6 +409,26 @@ func (c *adminServiceClient) DescribeTopic(ctx context.Context, in *DescribeTopi
 	return out, nil
 }
 
+func (c *adminServiceClient) AddPeer(ctx context.Context, in *AddPeerRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AdminService_AddPeer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) RemovePeer(ctx context.Context, in *RemovePeerRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, AdminService_RemovePeer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -413,6 +437,8 @@ type AdminServiceServer interface {
 	DeleteTopic(context.Context, *DeleteTopicRequest) (*Empty, error)
 	ListTopics(context.Context, *ListTopicsRequest) (*ListTopicsResponse, error)
 	DescribeTopic(context.Context, *DescribeTopicRequest) (*DescribeTopicResponse, error)
+	AddPeer(context.Context, *AddPeerRequest) (*Empty, error)
+	RemovePeer(context.Context, *RemovePeerRequest) (*Empty, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -434,6 +460,12 @@ func (UnimplementedAdminServiceServer) ListTopics(context.Context, *ListTopicsRe
 }
 func (UnimplementedAdminServiceServer) DescribeTopic(context.Context, *DescribeTopicRequest) (*DescribeTopicResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DescribeTopic not implemented")
+}
+func (UnimplementedAdminServiceServer) AddPeer(context.Context, *AddPeerRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddPeer not implemented")
+}
+func (UnimplementedAdminServiceServer) RemovePeer(context.Context, *RemovePeerRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemovePeer not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -528,6 +560,42 @@ func _AdminService_DescribeTopic_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_AddPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddPeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).AddPeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_AddPeer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).AddPeer(ctx, req.(*AddPeerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_RemovePeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemovePeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).RemovePeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_RemovePeer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).RemovePeer(ctx, req.(*RemovePeerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -550,6 +618,14 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DescribeTopic",
 			Handler:    _AdminService_DescribeTopic_Handler,
+		},
+		{
+			MethodName: "AddPeer",
+			Handler:    _AdminService_AddPeer_Handler,
+		},
+		{
+			MethodName: "RemovePeer",
+			Handler:    _AdminService_RemovePeer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

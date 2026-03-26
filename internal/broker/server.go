@@ -25,7 +25,7 @@ type Broker struct {
 	Manager *TopicManager
 	Store   *MessageStore
 	Raft    *raft.Server
-	peerAddrs []string
+	peerAddrs map[int32]string
 	// index: topic -> partition -> entries
 	index map[string]map[int32][]IndexEntry
 
@@ -35,7 +35,7 @@ type Broker struct {
 	subscriptions map[string][]string
 }
 
-func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server, peerAddrs []string) *Broker {
+func NewBroker(manager *TopicManager, store *MessageStore, r *raft.Server, peerAddrs map[int32]string) *Broker {
 	offsets, err := store.LoadOffsets()
 	if err != nil {
 		color.Red("Failed to load offsets: %v", err)
@@ -104,8 +104,8 @@ func (b *Broker) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRespons
 	if b.Raft != nil {
 		leaderId, _, isLeader := b.Raft.IsLeader()
 		if !isLeader {
-			if leaderId >= 0 && int(leaderId) < len(b.peerAddrs) {
-				return nil, fmt.Errorf("not leader, hint: %s", b.peerAddrs[leaderId])
+			if addr, ok := b.peerAddrs[leaderId]; ok {
+				return nil, fmt.Errorf("not leader, hint: %s", addr)
 			}
 			return nil, fmt.Errorf("not leader")
 		}
@@ -312,4 +312,32 @@ func (b *Broker) DescribeTopic(ctx context.Context, req *pb.DescribeTopicRequest
 	return &pb.DescribeTopicResponse{
 		Metadata: t,
 	}, nil
+}
+
+func (b *Broker) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.Empty, error) {
+	if b.Raft == nil {
+		return nil, fmt.Errorf("raft not enabled")
+	}
+	_, _, isLeader := b.Raft.AddPeer(req.Id, req.Address)
+	if !isLeader {
+		return nil, fmt.Errorf("not leader")
+	}
+	b.mu.Lock()
+	b.peerAddrs[req.Id] = req.Address
+	b.mu.Unlock()
+	return &pb.Empty{}, nil
+}
+
+func (b *Broker) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.Empty, error) {
+	if b.Raft == nil {
+		return nil, fmt.Errorf("raft not enabled")
+	}
+	_, _, isLeader := b.Raft.RemovePeer(req.Id)
+	if !isLeader {
+		return nil, fmt.Errorf("not leader")
+	}
+	b.mu.Lock()
+	delete(b.peerAddrs, req.Id)
+	b.mu.Unlock()
+	return &pb.Empty{}, nil
 }

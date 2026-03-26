@@ -16,10 +16,28 @@ message RequestVoteReply {
   bool vote_granted = 2;
 }
 
+enum EntryType {
+  COMMAND = 0;
+  CONFIG = 1;
+}
+
+enum ConfigChangeType {
+  ADD_NODE = 0;
+  REMOVE_NODE = 1;
+}
+
+message ConfigChange {
+  ConfigChangeType type = 1;
+  int32 node_id = 2;
+  string address = 3;
+}
+
 message LogEntry {
   int64 term = 1;
   int64 index = 2;
   bytes command = 3;
+  EntryType type = 4;
+  ConfigChange config = 5;
 }
 
 message AppendEntriesArgs {

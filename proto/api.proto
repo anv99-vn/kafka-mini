@@ -76,6 +76,15 @@ message ListTopicsResponse {
   repeated string names = 1;
 }
 
+message AddPeerRequest {
+  int32 id = 1;
+  string address = 2;
+}
+
+message RemovePeerRequest {
+  int32 id = 1;
+}
+
 message TopicMetadata {
   string name = 1;
   int32 partitions = 2;
@@ -106,6 +115,8 @@ service AdminService {
   rpc DeleteTopic(DeleteTopicRequest) returns (Empty);
   rpc ListTopics(ListTopicsRequest) returns (ListTopicsResponse);
   rpc DescribeTopic(DescribeTopicRequest) returns (DescribeTopicResponse);
+  rpc AddPeer(AddPeerRequest) returns (Empty);
+  rpc RemovePeer(RemovePeerRequest) returns (Empty);
 }
 
 message Empty {}

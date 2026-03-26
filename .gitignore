@@ -3,7 +3,5 @@ bin/
 data/
 *.log
 *.txt
-data2/
-data1/
-data0/
+data*/
 *.exe

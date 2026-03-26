@@ -27,9 +27,11 @@ func main() {
 	manager := broker.NewTopicManager()
 
 	// Initialize Raft Peers
-	peerAddrs := strings.Split(*peersFlag, ",")
+	peerAddrsList := strings.Split(*peersFlag, ",")
+	peerAddrs := make(map[int32]string)
 	peers := make(map[int32]pb.RaftServiceClient)
-	for i, peerAddr := range peerAddrs {
+	for i, peerAddr := range peerAddrsList {
+		peerAddrs[int32(i)] = peerAddr
 		if i == *id {
 			continue // Self, no RPC client needed
 		}

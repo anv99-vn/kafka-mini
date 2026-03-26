@@ -71,7 +71,13 @@ func TestRaftReplication(t *testing.T) {
 			t.Fatalf("Failed to create raft server %d: %v", i, err)
 		}
 		
-		b := NewBroker(manager, store, raftServer, peerAddrs)
+		// Create peerAddrs map for this broker
+		nodePeerAddrs := make(map[int32]string)
+		for j, addr := range peerAddrs {
+			nodePeerAddrs[int32(j)] = addr
+		}
+		
+		b := NewBroker(manager, store, raftServer, nodePeerAddrs)
 		brokers[i] = b
 		raftServers[i] = raftServer
 
@@ -217,7 +223,12 @@ func TestProduceConsumeAfterLeaderFailure(t *testing.T) {
 			t.Fatalf("Failed to create raft server %d: %v", i, err)
 		}
 
-		b := NewBroker(manager, store, raftServer, peerAddrs)
+		nodePeerAddrs := make(map[int32]string)
+		for j, addr := range peerAddrs {
+			nodePeerAddrs[int32(j)] = addr
+		}
+
+		b := NewBroker(manager, store, raftServer, nodePeerAddrs)
 		brokers[i] = b
 		raftServers[i] = raftServer
 
@@ -398,7 +409,12 @@ func TestClientProducerFailover(t *testing.T) {
 			t.Fatalf("Failed to create raft server %d: %v", i, err)
 		}
 
-		b := NewBroker(manager, store, raftServer, peerAddrs)
+		nodePeerAddrs := make(map[int32]string)
+		for j, addr := range peerAddrs {
+			nodePeerAddrs[int32(j)] = addr
+		}
+
+		b := NewBroker(manager, store, raftServer, nodePeerAddrs)
 		brokers[i] = b
 		raftServers[i] = raftServer
 

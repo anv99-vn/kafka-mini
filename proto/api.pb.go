@@ -753,6 +753,102 @@ func (x *ListTopicsResponse) GetNames() []string {
 	return nil
 }
 
+type AddPeerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Address       string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddPeerRequest) Reset() {
+	*x = AddPeerRequest{}
+	mi := &file_proto_api_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddPeerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddPeerRequest) ProtoMessage() {}
+
+func (x *AddPeerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_api_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddPeerRequest.ProtoReflect.Descriptor instead.
+func (*AddPeerRequest) Descriptor() ([]byte, []int) {
+	return file_proto_api_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *AddPeerRequest) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *AddPeerRequest) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+type RemovePeerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemovePeerRequest) Reset() {
+	*x = RemovePeerRequest{}
+	mi := &file_proto_api_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemovePeerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemovePeerRequest) ProtoMessage() {}
+
+func (x *RemovePeerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_api_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemovePeerRequest.ProtoReflect.Descriptor instead.
+func (*RemovePeerRequest) Descriptor() ([]byte, []int) {
+	return file_proto_api_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RemovePeerRequest) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
 type TopicMetadata struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -763,7 +859,7 @@ type TopicMetadata struct {
 
 func (x *TopicMetadata) Reset() {
 	*x = TopicMetadata{}
-	mi := &file_proto_api_proto_msgTypes[14]
+	mi := &file_proto_api_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -775,7 +871,7 @@ func (x *TopicMetadata) String() string {
 func (*TopicMetadata) ProtoMessage() {}
 
 func (x *TopicMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[14]
+	mi := &file_proto_api_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -788,7 +884,7 @@ func (x *TopicMetadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TopicMetadata.ProtoReflect.Descriptor instead.
 func (*TopicMetadata) Descriptor() ([]byte, []int) {
-	return file_proto_api_proto_rawDescGZIP(), []int{14}
+	return file_proto_api_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *TopicMetadata) GetName() string {
@@ -814,7 +910,7 @@ type DescribeTopicRequest struct {
 
 func (x *DescribeTopicRequest) Reset() {
 	*x = DescribeTopicRequest{}
-	mi := &file_proto_api_proto_msgTypes[15]
+	mi := &file_proto_api_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -826,7 +922,7 @@ func (x *DescribeTopicRequest) String() string {
 func (*DescribeTopicRequest) ProtoMessage() {}
 
 func (x *DescribeTopicRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[15]
+	mi := &file_proto_api_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -839,7 +935,7 @@ func (x *DescribeTopicRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DescribeTopicRequest.ProtoReflect.Descriptor instead.
 func (*DescribeTopicRequest) Descriptor() ([]byte, []int) {
-	return file_proto_api_proto_rawDescGZIP(), []int{15}
+	return file_proto_api_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DescribeTopicRequest) GetName() string {
@@ -858,7 +954,7 @@ type DescribeTopicResponse struct {
 
 func (x *DescribeTopicResponse) Reset() {
 	*x = DescribeTopicResponse{}
-	mi := &file_proto_api_proto_msgTypes[16]
+	mi := &file_proto_api_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -870,7 +966,7 @@ func (x *DescribeTopicResponse) String() string {
 func (*DescribeTopicResponse) ProtoMessage() {}
 
 func (x *DescribeTopicResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[16]
+	mi := &file_proto_api_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -883,7 +979,7 @@ func (x *DescribeTopicResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DescribeTopicResponse.ProtoReflect.Descriptor instead.
 func (*DescribeTopicResponse) Descriptor() ([]byte, []int) {
-	return file_proto_api_proto_rawDescGZIP(), []int{16}
+	return file_proto_api_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *DescribeTopicResponse) GetMetadata() *TopicMetadata {
@@ -901,7 +997,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_proto_api_proto_msgTypes[17]
+	mi := &file_proto_api_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -913,7 +1009,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[17]
+	mi := &file_proto_api_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -926,7 +1022,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_proto_api_proto_rawDescGZIP(), []int{17}
+	return file_proto_api_proto_rawDescGZIP(), []int{19}
 }
 
 var File_proto_api_proto protoreflect.FileDescriptor
@@ -981,7 +1077,12 @@ const file_proto_api_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x13\n" +
 	"\x11ListTopicsRequest\"*\n" +
 	"\x12ListTopicsResponse\x12\x14\n" +
-	"\x05names\x18\x01 \x03(\tR\x05names\"C\n" +
+	"\x05names\x18\x01 \x03(\tR\x05names\":\n" +
+	"\x0eAddPeerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x18\n" +
+	"\aaddress\x18\x02 \x01(\tR\aaddress\"#\n" +
+	"\x11RemovePeerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\"C\n" +
 	"\rTopicMetadata\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
@@ -998,13 +1099,16 @@ const file_proto_api_proto_rawDesc = "" +
 	"\tSubscribe\x12\x17.kafka.SubscribeRequest\x1a\f.kafka.Empty\x12/\n" +
 	"\x04Poll\x12\x12.kafka.PollRequest\x1a\x13.kafka.PollResponse\x12,\n" +
 	"\x06Commit\x12\x14.kafka.CommitRequest\x1a\f.kafka.Empty\x12(\n" +
-	"\x04Seek\x12\x12.kafka.SeekRequest\x1a\f.kafka.Empty2\x9b\x02\n" +
+	"\x04Seek\x12\x12.kafka.SeekRequest\x1a\f.kafka.Empty2\x81\x03\n" +
 	"\fAdminService\x12D\n" +
 	"\vCreateTopic\x12\x19.kafka.CreateTopicRequest\x1a\x1a.kafka.CreateTopicResponse\x126\n" +
 	"\vDeleteTopic\x12\x19.kafka.DeleteTopicRequest\x1a\f.kafka.Empty\x12A\n" +
 	"\n" +
 	"ListTopics\x12\x18.kafka.ListTopicsRequest\x1a\x19.kafka.ListTopicsResponse\x12J\n" +
-	"\rDescribeTopic\x12\x1b.kafka.DescribeTopicRequest\x1a\x1c.kafka.DescribeTopicResponseB!Z\x1fgithub.com/vna/kafka-mini/protob\x06proto3"
+	"\rDescribeTopic\x12\x1b.kafka.DescribeTopicRequest\x1a\x1c.kafka.DescribeTopicResponse\x12.\n" +
+	"\aAddPeer\x12\x15.kafka.AddPeerRequest\x1a\f.kafka.Empty\x124\n" +
+	"\n" +
+	"RemovePeer\x12\x18.kafka.RemovePeerRequest\x1a\f.kafka.EmptyB!Z\x1fgithub.com/vna/kafka-mini/protob\x06proto3"
 
 var (
 	file_proto_api_proto_rawDescOnce sync.Once
@@ -1018,7 +1122,7 @@ func file_proto_api_proto_rawDescGZIP() []byte {
 	return file_proto_api_proto_rawDescData
 }
 
-var file_proto_api_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_proto_api_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_proto_api_proto_goTypes = []any{
 	(*Message)(nil),               // 0: kafka.Message
 	(*TopicPartition)(nil),        // 1: kafka.TopicPartition
@@ -1034,18 +1138,20 @@ var file_proto_api_proto_goTypes = []any{
 	(*DeleteTopicRequest)(nil),    // 11: kafka.DeleteTopicRequest
 	(*ListTopicsRequest)(nil),     // 12: kafka.ListTopicsRequest
 	(*ListTopicsResponse)(nil),    // 13: kafka.ListTopicsResponse
-	(*TopicMetadata)(nil),         // 14: kafka.TopicMetadata
-	(*DescribeTopicRequest)(nil),  // 15: kafka.DescribeTopicRequest
-	(*DescribeTopicResponse)(nil), // 16: kafka.DescribeTopicResponse
-	(*Empty)(nil),                 // 17: kafka.Empty
-	nil,                           // 18: kafka.CommitRequest.OffsetsEntry
+	(*AddPeerRequest)(nil),        // 14: kafka.AddPeerRequest
+	(*RemovePeerRequest)(nil),     // 15: kafka.RemovePeerRequest
+	(*TopicMetadata)(nil),         // 16: kafka.TopicMetadata
+	(*DescribeTopicRequest)(nil),  // 17: kafka.DescribeTopicRequest
+	(*DescribeTopicResponse)(nil), // 18: kafka.DescribeTopicResponse
+	(*Empty)(nil),                 // 19: kafka.Empty
+	nil,                           // 20: kafka.CommitRequest.OffsetsEntry
 }
 var file_proto_api_proto_depIdxs = []int32{
 	0,  // 0: kafka.SendRequest.messages:type_name -> kafka.Message
 	0,  // 1: kafka.PollResponse.messages:type_name -> kafka.Message
-	18, // 2: kafka.CommitRequest.offsets:type_name -> kafka.CommitRequest.OffsetsEntry
+	20, // 2: kafka.CommitRequest.offsets:type_name -> kafka.CommitRequest.OffsetsEntry
 	1,  // 3: kafka.SeekRequest.partition:type_name -> kafka.TopicPartition
-	14, // 4: kafka.DescribeTopicResponse.metadata:type_name -> kafka.TopicMetadata
+	16, // 4: kafka.DescribeTopicResponse.metadata:type_name -> kafka.TopicMetadata
 	2,  // 5: kafka.ProducerService.Send:input_type -> kafka.SendRequest
 	4,  // 6: kafka.ConsumerService.Subscribe:input_type -> kafka.SubscribeRequest
 	5,  // 7: kafka.ConsumerService.Poll:input_type -> kafka.PollRequest
@@ -1054,18 +1160,22 @@ var file_proto_api_proto_depIdxs = []int32{
 	9,  // 10: kafka.AdminService.CreateTopic:input_type -> kafka.CreateTopicRequest
 	11, // 11: kafka.AdminService.DeleteTopic:input_type -> kafka.DeleteTopicRequest
 	12, // 12: kafka.AdminService.ListTopics:input_type -> kafka.ListTopicsRequest
-	15, // 13: kafka.AdminService.DescribeTopic:input_type -> kafka.DescribeTopicRequest
-	3,  // 14: kafka.ProducerService.Send:output_type -> kafka.SendResponse
-	17, // 15: kafka.ConsumerService.Subscribe:output_type -> kafka.Empty
-	6,  // 16: kafka.ConsumerService.Poll:output_type -> kafka.PollResponse
-	17, // 17: kafka.ConsumerService.Commit:output_type -> kafka.Empty
-	17, // 18: kafka.ConsumerService.Seek:output_type -> kafka.Empty
-	10, // 19: kafka.AdminService.CreateTopic:output_type -> kafka.CreateTopicResponse
-	17, // 20: kafka.AdminService.DeleteTopic:output_type -> kafka.Empty
-	13, // 21: kafka.AdminService.ListTopics:output_type -> kafka.ListTopicsResponse
-	16, // 22: kafka.AdminService.DescribeTopic:output_type -> kafka.DescribeTopicResponse
-	14, // [14:23] is the sub-list for method output_type
-	5,  // [5:14] is the sub-list for method input_type
+	17, // 13: kafka.AdminService.DescribeTopic:input_type -> kafka.DescribeTopicRequest
+	14, // 14: kafka.AdminService.AddPeer:input_type -> kafka.AddPeerRequest
+	15, // 15: kafka.AdminService.RemovePeer:input_type -> kafka.RemovePeerRequest
+	3,  // 16: kafka.ProducerService.Send:output_type -> kafka.SendResponse
+	19, // 17: kafka.ConsumerService.Subscribe:output_type -> kafka.Empty
+	6,  // 18: kafka.ConsumerService.Poll:output_type -> kafka.PollResponse
+	19, // 19: kafka.ConsumerService.Commit:output_type -> kafka.Empty
+	19, // 20: kafka.ConsumerService.Seek:output_type -> kafka.Empty
+	10, // 21: kafka.AdminService.CreateTopic:output_type -> kafka.CreateTopicResponse
+	19, // 22: kafka.AdminService.DeleteTopic:output_type -> kafka.Empty
+	13, // 23: kafka.AdminService.ListTopics:output_type -> kafka.ListTopicsResponse
+	18, // 24: kafka.AdminService.DescribeTopic:output_type -> kafka.DescribeTopicResponse
+	19, // 25: kafka.AdminService.AddPeer:output_type -> kafka.Empty
+	19, // 26: kafka.AdminService.RemovePeer:output_type -> kafka.Empty
+	16, // [16:27] is the sub-list for method output_type
+	5,  // [5:16] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -1082,7 +1192,7 @@ func file_proto_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_api_proto_rawDesc), len(file_proto_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

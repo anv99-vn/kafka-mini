@@ -8,6 +8,8 @@ import (
 
 	"github.com/fatih/color"
 	pb "github.com/vna/kafka-mini/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type State int
@@ -367,6 +369,12 @@ func (s *Server) AppendEntries(ctx context.Context, args *pb.AppendEntriesArgs) 
 			s.log.Truncate(idx)
 		}
 		s.log.Append(args.Entries...)
+		// 2.a Process configuration changes immediately
+		for _, entry := range args.Entries {
+			if entry.Type == pb.EntryType_CONFIG {
+				s.processConfigChange(entry.Config)
+			}
+		}
 	}
 
 	// 3. Update commit index
@@ -410,6 +418,111 @@ func (s *Server) Propose(command []byte) (int64, int64, bool) {
 	return index, term, true
 }
 
+func (s *Server) AddPeer(id int32, addr string) (int64, int64, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.state != Leader {
+		return -1, -1, false
+	}
+
+	index := s.log.LastIndex() + 1
+	term := s.currentTerm
+
+	entry := &pb.LogEntry{
+		Term:  term,
+		Index: index,
+		Type:  pb.EntryType_CONFIG,
+		Config: &pb.ConfigChange{
+			Type:   pb.ConfigChangeType_ADD_NODE,
+			NodeId: id,
+			Address: addr,
+		},
+	}
+
+	s.log.Append(entry)
+	s.processConfigChange(entry.Config)
+	
+	s.matchIndex[s.id] = index
+	s.nextIndex[s.id] = index + 1
+
+	go s.sendHeartbeats()
+
+	return index, term, true
+}
+
+func (s *Server) RemovePeer(id int32) (int64, int64, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.state != Leader {
+		return -1, -1, false
+	}
+
+	index := s.log.LastIndex() + 1
+	term := s.currentTerm
+
+	entry := &pb.LogEntry{
+		Term:  term,
+		Index: index,
+		Type:  pb.EntryType_CONFIG,
+		Config: &pb.ConfigChange{
+			Type:   pb.ConfigChangeType_REMOVE_NODE,
+			NodeId: id,
+		},
+	}
+
+	s.log.Append(entry)
+	s.processConfigChange(entry.Config)
+
+	s.matchIndex[s.id] = index
+	s.nextIndex[s.id] = index + 1
+
+	go s.sendHeartbeats()
+
+	return index, term, true
+}
+
+func (s *Server) processConfigChange(config *pb.ConfigChange) {
+	if config == nil {
+		return
+	}
+	if config.Type == pb.ConfigChangeType_ADD_NODE {
+		if config.NodeId == s.id {
+			return
+		}
+		if _, ok := s.peers[config.NodeId]; !ok {
+			color.Cyan("Node %d: adding peer %d at %s", s.id, config.NodeId, config.Address)
+			conn, err := grpc.NewClient(config.Address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				return
+			}
+			s.peers[config.NodeId] = pb.NewRaftServiceClient(conn)
+			if s.state == Leader {
+				s.nextIndex[config.NodeId] = s.log.LastIndex() + 1
+				s.matchIndex[config.NodeId] = 0
+			}
+		}
+	} else if config.Type == pb.ConfigChangeType_REMOVE_NODE {
+		if config.NodeId == s.id {
+			color.Red("Node %d: I am being removed from cluster", s.id)
+			// Step down if we are leader or candidate
+			if s.state != Follower {
+				s.becomeFollower(s.currentTerm)
+			}
+			return
+		}
+		if _, ok := s.peers[config.NodeId]; ok {
+			color.Red("Node %d: removing peer %d", s.id, config.NodeId)
+			delete(s.peers, config.NodeId)
+			if s.state == Leader {
+				delete(s.nextIndex, config.NodeId)
+				delete(s.matchIndex, config.NodeId)
+			}
+		}
+	}
+}
+
 func (s *Server) IsLeader() (int32, int64, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -420,10 +533,33 @@ func (s *Server) applyCommitted() {
 	if s.commitIndex > s.lastApplied {
 		for i := s.lastApplied + 1; i <= s.commitIndex; i++ {
 			entry := s.log.Get(i)
-			if entry != nil && len(entry.Command) > 0 {
-				s.sm.Apply(entry.Command)
+			if entry != nil {
+				if entry.Type == pb.EntryType_COMMAND && len(entry.Command) > 0 {
+					s.sm.Apply(entry.Command)
+				} else if entry.Type == pb.EntryType_CONFIG {
+					// Configuration changes are applied when added to log,
+					// but here we handle side effects of commitment.
+					if entry.Config.Type == pb.ConfigChangeType_REMOVE_NODE && entry.Config.NodeId == s.id {
+						color.Red("Node %d: removal from cluster COMMITTED. Stopping...", s.id)
+						go func() {
+							time.Sleep(100 * time.Millisecond)
+							s.Stop()
+						}()
+					}
+				}
 			}
 			s.lastApplied = i
 		}
 	}
+}
+func (s *Server) Status() (int32, string, int64, int32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	stateStr := "Follower"
+	if s.state == Candidate {
+		stateStr = "Candidate"
+	} else if s.state == Leader {
+		stateStr = "Leader"
+	}
+	return s.id, stateStr, s.currentTerm, s.leaderId
 }
